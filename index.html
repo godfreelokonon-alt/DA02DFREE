@@ -2,62 +2,56 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>GODFREE RAIL ENGINE - SYNO-QUALITÉ</title>
+    <title>RAIL STUDIO EXPERT</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app-container">
         <header class="ribbon">
             <div class="logo">GODFREE <span>RAIL ENGINE</span></div>
-            <div class="config-bar">
-                PK Début: <input type="number" id="cfg-origin" value="18000" onchange="app.updateSettings()">
-                Échelle: <input type="number" id="cfg-scale" value="10" onchange="app.updateSettings()">
-                <button onclick="app.ui.toggleModal()" class="btn-main">+ Nouveau Contrôle</button>
-                <button onclick="app.data.clearAll()" class="btn-danger">Effacer Projet</button>
+            <div class="tools">
+                <button onclick="ui.openModal()">+ Ajouter Élément</button>
+                <button onclick="data.clear()" style="background:#c0392b">🗑️ Reset Complet</button>
             </div>
         </header>
 
-        <main class="workspace">
-            <aside class="panel left-panel">
-                <h3>Types de Fiches (Légende)</h3>
-                <div id="fiche-legend" class="scrollable"></div>
-                <div class="type-creator">
-                    <input type="text" id="new-type-name" placeholder="Nom fiche (ex: M240)">
-                    <input type="color" id="new-type-color" value="#3498db">
-                    <button onclick="app.data.addFicheType()">Ajouter</button>
-                </div>
+        <main class="content">
+            <aside class="sidebar" id="legend">
+                <h3>Fiches & Couleurs</h3>
+                <div id="fiche-list"></div>
             </aside>
 
-            <section class="viewer" id="viewer-container">
-                <canvas id="mainCanvas"></canvas>
-                <div id="pk-indicator">PK: ---</div>
+            <section class="viewer">
+                <canvas id="canvas"></canvas>
             </section>
 
-            <aside class="panel right-panel">
-                <h3>Suivi Journalier</h3>
-                <div id="reception-feed" class="scrollable"></div>
+            <aside class="sidebar">
+                <h3>Contrôles (X pour Suppr)</h3>
+                <div id="object-list"></div>
             </aside>
         </main>
 
-        <footer class="system-console">
-            <span class="prompt">SYSTEM_CMD ></span>
-            <input type="text" id="cmd-input" placeholder="ZONE [PK_DEBUT] [PK_FIN] [TYPE] [STATUT] [VOIE]">
+        <footer class="console">
+            <span>CMD > </span>
+            <input type="text" id="cmd" placeholder="ZONE 18033 18098 M240 C V1">
         </footer>
     </div>
 
-    <div id="form-modal" class="modal">
-        <div class="modal-content">
-            <h3>Saisie Fiche de Contrôle</h3>
-            <select id="m-type"></select>
-            <select id="m-voie"><option value="V1">Voie 1 (V1)</option><option value="V2">Voie 2 (V2)</option></select>
-            <div class="row"><input type="number" id="m-pks" placeholder="PK Début"><input type="number" id="m-pke" placeholder="PK Fin"></div>
-            <select id="m-status">
-                <option value="">En attente (Vide)</option>
-                <option value="C">Conforme (C - Vert)</option>
-                <option value="NC">Non Conforme (NC - Rouge)</option>
-                <option value="NR">Non Reçu (NR - Orange)</option>
+    <div id="modal" class="modal">
+        <div class="modal-box">
+            <h3>Saisie PK</h3>
+            <input type="text" id="in-type" placeholder="Type (ex: M240)">
+            <input type="number" id="in-pks" placeholder="PK Début">
+            <input type="number" id="in-pke" placeholder="PK Fin">
+            <select id="in-voie"><option value="V1">V1</option><option value="V2">V2</option></select>
+            <select id="in-status">
+                <option value="">Statut...</option>
+                <option value="C">C (Conforme - Vert)</option>
+                <option value="NC">NC (Non Conforme - Rouge)</option>
+                <option value="NR">NR (Non Reçu - Orange)</option>
             </select>
-            <div class="modal-actions"><button onclick="app.ui.saveModal()">Valider</button><button onclick="app.ui.toggleModal()">Annuler</button></div>
+            <button onclick="ui.save()">Enregistrer</button>
+            <button onclick="ui.closeModal()">Annuler</button>
         </div>
     </div>
     <script src="app.js"></script>
