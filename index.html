@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>GODFREE RAIL STUDIO v2.0</title>
+    <title>GODFREE RAIL STUDIO - EXPERT SYSTEM</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,51 +14,59 @@
                 Échelle: <input type="number" id="scale-val" value="10" onchange="sync()">
             </div>
             <div class="actions">
-                <button onclick="openModal('zone')" class="btn-zone">+ Ajouter Zone</button>
-                <button onclick="openModal('point')" class="btn-point">+ Élément Ponctuel (JIC)</button>
-                <button onclick="exportData()" class="btn-export">Exporter PDF/Excel</button>
+                <button onclick="openModal('ZONE')" class="btn-tool">+ Zone</button>
+                <button onclick="openModal('JIC')" class="btn-tool">+ Point (JIC)</button>
+                <button onclick="clearAll()" class="btn-danger">🗑️ Vider Projet</button>
             </div>
         </header>
 
         <main class="content">
             <aside class="sidebar left">
-                <h3>Légende & Fiches</h3>
-                <div id="legend-items"></div>
-                <hr>
-                <button onclick="openLegendModal()" class="btn-add-type">⚙️ Configurer Types</button>
+                <h3>Légende des Fiches</h3>
+                <div id="legend-list"></div>
+                <div class="add-type-form">
+                    <input type="text" id="new-type-name" placeholder="Nom (ex: M240)">
+                    <input type="color" id="new-type-color" value="#3498db">
+                    <button onclick="addFicheType()">Ajouter Type</button>
+                </div>
             </aside>
 
             <section class="viewport">
                 <canvas id="mainCanvas"></canvas>
-                <div id="pk-indicator">PK: ---</div>
+                <div id="pk-indicator">PK: --- | Voie: ---</div>
             </section>
 
             <aside class="sidebar right">
                 <h3>Suivi de Réception</h3>
-                <div id="reception-list" class="list-container"></div>
+                <div id="reception-list"></div>
             </aside>
         </main>
+
+        <footer class="console">
+            <span class="prompt">COMMAND_LINE ></span>
+            <input type="text" id="cmd-input" placeholder="Ex: ZONE 18033 18098 M240 C V1">
+        </footer>
     </div>
 
-    <div id="zone-modal" class="modal">
+    <div id="form-modal" class="modal">
         <div class="modal-content">
-            <h3>Nouvel Élément Ferroviaire</h3>
-            <label>Type : <select id="input-type"></select></label>
-            <label>Voie : <select id="input-voie"><option>V1</option><option>V2</option></select></label>
-            <div class="pk-group">
-                <label>PK Début: <input type="number" id="input-pks"></label>
-                <label>PK Fin: <input type="number" id="input-pke"></label>
+            <h3 id="modal-title">Nouvel Élément</h3>
+            <label>Fiche : <select id="input-type"></select></label>
+            <label>Voie : <select id="input-voie"><option value="V1">V1</option><option value="V2">V2</option></select></label>
+            <div class="pk-row">
+                <label>Début: <input type="number" id="input-pks"></label>
+                <label>Fin: <input type="number" id="input-pke"></label>
             </div>
             <label>Statut : 
                 <select id="input-status">
-                    <option value="">Vide</option>
+                    <option value="">En attente</option>
                     <option value="C">C (Conforme)</option>
                     <option value="NC">NC (Non Conforme)</option>
                     <option value="NR">NR (Non Reçu)</option>
                 </select>
             </label>
-            <div class="modal-buttons">
-                <button onclick="saveZone()">Enregistrer</button>
+            <div class="modal-btns">
+                <button onclick="saveFromModal()">Valider</button>
                 <button onclick="closeModal()" class="btn-cancel">Annuler</button>
             </div>
         </div>
