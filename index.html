@@ -2,40 +2,43 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>MiniRevit 2D - Workspace</title>
+    <title>MiniRevit 2D - Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header class="ribbon">
         <div class="group">
             <span>DESSIN</span>
-            <button onclick="setTool('line')">Ligne</button>
-            <button onclick="setTool('rect')">Rectangle</button>
-            <button onclick="setTool('poly')">Polyligne</button>
+            <button id="btn-line">Ligne</button>
+            <button id="btn-rect">Rectangle</button>
         </div>
         <div class="group">
             <span>ANNOTER</span>
-            <button onclick="setTool('text')">Texte</button>
-            <button onclick="calculate()">Calculer Surface</button>
+            <button id="btn-text">Texte</button>
+            <button id="btn-clear" style="color: red;">Tout Effacer</button>
         </div>
         <div class="group">
             <span>PROJET</span>
-            <button class="save">Enregistrer</button>
+            <button id="btn-save">Enregistrer</button>
         </div>
     </header>
 
     <main class="workspace">
         <aside class="panel properties">
             <h3>Propriétés</h3>
-            <div id="prop-content">
-                <label>Couleur : <input type="color" id="colorPicker"></label>
-                <label>Épaisseur : <input type="number" value="2" id="strokeWeight"></label>
-                <hr>
-                <div id="calculations">
-                    <p>Longueur: <span id="val-len">0</span> m</p>
-                    <p>Surface: <span id="val-area">0</span> m²</p>
-                </div>
+            <label>Couleur : <input type="color" id="colorPicker" value="#0078d7"></label>
+            <label>Épaisseur : <input type="number" id="strokeWeight" value="2" min="1"></label>
+            <hr>
+            <div id="calculations">
+                <p>Longueur: <span id="val-len">0</span> m</p>
+                <p>Surface: <span id="val-area">0</span> m²</p>
             </div>
+            <p style="font-size: 0.8em; color: #666; margin-top: 20px;">
+                💡 <b>Astuces :</b><br>
+                - Molette : Zoom<br>
+                - Clic Molette : Pan (Déplacer)<br>
+                - Suppr : Effacer dernier
+            </p>
         </aside>
 
         <section class="canvas-container">
@@ -44,9 +47,8 @@
 
         <aside class="panel library">
             <h3>Bibliothèque</h3>
-            <div class="lib-item" draggable="true">Porte Standard</div>
-            <div class="lib-item" draggable="true">Fenêtre 120x60</div>
-            <div class="lib-item" draggable="true">Mobilier Bureau</div>
+            <div class="lib-item">Porte Standard</div>
+            <div class="lib-item">Fenêtre</div>
         </aside>
     </main>
 
