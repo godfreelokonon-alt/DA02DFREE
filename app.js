@@ -1,127 +1,88 @@
-const app = {
-    settings: { origin: 18000, scale: 10, offset: 60 },
-    data: {
-        entities: [],
-        types: { 'M240': '#add8e6', 'M243': '#3498db', 'JIC': '#ff0000', 'BALLAST': '#2ea043' },
-        
-        init() {
-            const saved = localStorage.getItem('rail_engine_data');
-            if(saved) this.entities = JSON.parse(saved);
-            app.ui.refresh();
-        },
-        save() { localStorage.setItem('rail_engine_data', JSON.stringify(this.entities)); },
-        
-        addZone(type, pks, pke, status, voie) {
-            this.entities.push({ id: Date.now(), type, pks, pke, status, voie });
-            this.save();
-            app.ui.refresh();
-        },
-        delete(id) {
-            this.entities = this.entities.filter(e => e.id !== id);
-            this.save();
-            app.ui.refresh();
-        },
-        addFicheType() {
-            const name = document.getElementById('new-type-name').value.toUpperCase();
-            const color = document.getElementById('new-type-color').value;
-            if(name) { this.types[name] = color; app.ui.refresh(); }
-        },
-        clearAll() { if(confirm("Supprimer tout le projet ?")) { this.entities = []; this.save(); app.ui.refresh(); } }
+const data = {
+    items: JSON.parse(localStorage.getItem('rail_v3')) || [],
+    types: { 'M240': '#3498db', 'M243': '#2980b9', 'JIC': '#e74c3c', 'BALLAST': '#27ae60' },
+    
+    save() {
+        localStorage.setItem('rail_v3', JSON.stringify(this.items));
+        ui.render();
     },
-    ui: {
-        toggleModal() { 
-            const m = document.getElementById('form-modal');
-            m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
-            const sel = document.getElementById('m-type');
-            sel.innerHTML = Object.keys(app.data.types).map(t => `<option value="${t}">${t}</option>`).join('');
-        },
-        saveModal() {
-            app.data.addZone(
-                document.getElementById('m-type').value,
-                parseFloat(document.getElementById('m-pks').value),
-                parseFloat(document.getElementById('m-pke').value),
-                document.getElementById('m-status').value,
-                document.getElementById('m-voie').value
-            );
-            this.toggleModal();
-        },
-        refresh() {
-            this.draw();
-            this.renderLists();
-        },
-        renderLists() {
-            const feed = document.getElementById('reception-feed');
-            feed.innerHTML = app.data.entities.map(e => `
-                <div class="reception-card status-${e.status}">
-                    <div><strong>${e.type}</strong> (${e.voie})<br>PK ${e.pks}-${e.pke}</div>
-                    <button onclick="app.data.delete(${e.id})">✕</button>
-                </div>
-            `).reverse().join('');
-
-            const leg = document.getElementById('fiche-legend');
-            leg.innerHTML = Object.entries(app.data.types).map(([k, v]) => `
-                <div style="padding:5px; border-bottom:1px solid #333">
-                    <span style="display:inline-block; width:15px; height:15px; background:${v}; margin-right:10px"></span>${k}
-                </div>
-            `).join('');
-        },
-        draw() {
-            const canvas = document.getElementById('mainCanvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-            
-            ctx.clearRect(0,0, canvas.width, canvas.height);
-            ctx.save();
-            ctx.translate(app.settings.offset, 100);
-
-            // Grille PK
-            ctx.strokeStyle = "#30363d";
-            for(let i=0; i<10000; i += (app.settings.scale * 10)) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 600); ctx.stroke();
-                if(i % (app.settings.scale * 50) === 0) {
-                    ctx.fillStyle = "#8b949e";
-                    ctx.fillText(app.settings.origin + (i/app.settings.scale), i+2, -10);
-                }
-            }
-
-            // Dessin des zones par ligne dédiée (V1 en haut, V2 en bas)
-            const typeKeys = Object.keys(app.data.types);
-            app.data.entities.forEach(ent => {
-                let color = app.data.types[ent.type] || '#777';
-                if(ent.status === 'C') color = '#2ea043'; //
-                if(ent.status === 'NC') color = '#f85149'; //
-                if(ent.status === 'NR') color = '#d29922'; //
-
-                const x = (ent.pks - app.settings.origin) * app.settings.scale;
-                const w = Math.max(5, (ent.pke - ent.pks) * app.settings.scale);
-                // Calcul de la ligne Y pour éviter les chevauchements
-                const typeIndex = typeKeys.indexOf(ent.type);
-                const y = (ent.voie === 'V1' ? 20 : 300) + (typeIndex * 25);
-
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y, w, 20);
-                ctx.fillStyle = "white";
-                ctx.font = "bold 10px Arial";
-                ctx.fillText(`${ent.type} (${ent.voie})`, x + 5, y + 14);
-            });
-            ctx.restore();
+    add(type, pks, pke, status, voie) {
+        this.items.push({ id: Date.now(), type, pks, pke, status, voie });
+        this.save();
+    },
+    delete(id) {
+        this.items = this.items.filter(i => i.id !== id);
+        this.save();
+    },
+    clear() {
+        if(confirm("Effacer TOUTES les données ?")) {
+            this.items = [];
+            localStorage.removeItem('rail_v3');
+            ui.render();
         }
-    },
-    updateSettings() {
-        this.settings.origin = parseFloat(document.getElementById('cfg-origin').value);
-        this.settings.scale = parseFloat(document.getElementById('cfg-scale').value);
-        this.ui.refresh();
     }
 };
 
-// Pilotage par console
-document.getElementById('cmd-input').addEventListener('keydown', (e) => {
+const ui = {
+    render() {
+        const canv = document.getElementById('canvas');
+        const ctx = canv.getContext('2d');
+        canv.width = canv.parentElement.clientWidth;
+        canv.height = canv.parentElement.clientHeight;
+
+        ctx.clearRect(0,0, canv.width, canv.height);
+        
+        // Liste de droite (avec le X pour supprimer)
+        const list = document.getElementById('object-list');
+        list.innerHTML = data.items.map(i => `
+            <div class="card status-${i.status}">
+                <span>${i.type} (${i.voie}) PK ${i.pks}</span>
+                <button onclick="data.delete(${i.id})">X</button>
+            </div>
+        `).join('');
+
+        // Dessin Synoptique
+        ctx.save();
+        ctx.translate(50, 50);
+        data.items.forEach((item, index) => {
+            let color = data.types[item.type] || '#95a5a6';
+            if(item.status === 'C') color = '#27ae60'; //
+            if(item.status === 'NC') color = '#e74c3c'; //
+            if(item.status === 'NR') color = '#f39c12'; //
+
+            const x = (item.pks - 18000) * 10;
+            const w = Math.max(5, (item.pke - item.pks) * 10);
+            // On décale chaque fiche vers le bas pour éviter l'empilement
+            const y = (item.voie === 'V1' ? 20 : 250) + (index * 25);
+
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, 20);
+            ctx.fillStyle = "white";
+            ctx.fillText(`${item.type} ${item.voie}`, x, y - 5);
+        });
+        ctx.restore();
+    },
+    openModal() { document.getElementById('modal').style.display = 'flex'; },
+    closeModal() { document.getElementById('modal').style.display = 'none'; },
+    save() {
+        data.add(
+            document.getElementById('in-type').value.toUpperCase(),
+            parseFloat(document.getElementById('in-pks').value),
+            parseFloat(document.getElementById('in-pke').value),
+            document.getElementById('in-status').value,
+            document.getElementById('in-voie').value
+        );
+        this.closeModal();
+    }
+};
+
+// Console Revit
+document.getElementById('cmd').addEventListener('keydown', (e) => {
     if(e.key === 'Enter') {
-        const p = e.target.value.toUpperCase().split(' ');
-        if(p[0] === 'ZONE') app.data.addZone(p[3], parseFloat(p[1]), parseFloat(p[2]), p[4]||'', p[5]||'V1');
+        const p = e.target.value.split(' ');
+        if(p[0].toUpperCase() === 'ZONE') data.add(p[3], parseFloat(p[1]), parseFloat(p[2]), p[4]||'', p[5]||'V1');
         e.target.value = '';
     }
 });
 
-window.onload = () => app.data.init();
+window.onload = () => ui.render();
