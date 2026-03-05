@@ -2,117 +2,119 @@ const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
 
 let state = {
-    pkOrigin: 18000,
-    scale: 10,
     entities: [],
-    camera: { x: 50, y: 300, zoom: 0.8 },
-    // Légende initiale (tu peux en supprimer/ajouter)
+    // Ta légende personnalisable
     ficheTypes: {
-        'M240': { color: '#3498db', label: 'Traverses M240' },
-        'ZE': { color: '#e67e22', label: 'Zone Étroite' }
-    }
+        'M240': { label: 'Traverses M240', color: '#3498db' },
+        'M243': { label: 'Traverses M243', color: '#2980b9' },
+        'JIC': { label: 'Joint JIC', color: '#e74c3c', isPoint: true },
+        'BALLAST': { label: 'Pose Ballast', color: '#2ecc71' }
+    },
+    pkOrigin: 18000,
+    scale: 10
 };
 
-// --- CONFIGURATION INITIALE ---
-function updateProjectSettings() {
-    state.pkOrigin = parseFloat(document.getElementById('pk-start-cfg').value);
-    state.scale = parseFloat(document.getElementById('pk-scale-cfg').value);
+// --- SYNCHRONISATION DES PARAMÈTRES ---
+function sync() {
+    state.pkOrigin = parseFloat(document.getElementById('pk-start').value);
+    state.scale = parseFloat(document.getElementById('scale-val').value);
     render();
 }
 
-// --- GESTION DE LA LÉGENDE (CORBEILLE & AJOUT) ---
-function renderLegend() {
-    const list = document.getElementById('legend-list');
-    list.innerHTML = Object.entries(state.ficheTypes).map(([id, data]) => `
-        <div class="fiche-item">
-            <span style="border-left: 10px solid ${data.color}; padding-left: 8px;">${data.label}</span>
-            <button class="btn-del" onclick="removeFicheType('${id}')">✕</button>
+// --- GESTION DES MODALS ---
+function openModal(mode) {
+    const select = document.getElementById('input-type');
+    select.innerHTML = Object.entries(state.ficheTypes)
+        .map(([id, data]) => `<option value="${id}">${data.label}</option>`).join('');
+    document.getElementById('zone-modal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('zone-modal').style.display = 'none';
+}
+
+// --- AJOUT ET SUPPRESSION ---
+function saveZone() {
+    const type = document.getElementById('input-type').value;
+    const pks = parseFloat(document.getElementById('input-pks').value);
+    const pke = parseFloat(document.getElementById('input-pke').value) || pks;
+    const status = document.getElementById('input-status').value;
+    const voie = document.getElementById('input-voie').value;
+
+    const x = (pks - state.pkOrigin) * state.scale;
+    const w = (pke - pks) * state.scale;
+
+    state.entities.push({
+        id: Date.now(),
+        type, pks, pke, x, w, status, voie,
+        y: (voie === 'V1' ? 60 : 100) + (Object.keys(state.ficheTypes).indexOf(type) * 20)
+    });
+
+    closeModal();
+    updateReceptionList();
+    render();
+}
+
+function deleteEntity(id) {
+    state.entities = state.entities.filter(e => e.id !== id);
+    updateReceptionList();
+    render();
+}
+
+// --- MISE À JOUR DU TABLEAU DE DROITE (CORBEILLE) ---
+function updateReceptionList() {
+    const list = document.getElementById('reception-list');
+    list.innerHTML = state.entities.map(ent => `
+        <div class="reception-card status-${ent.status}">
+            <div class="info">
+                <strong>${ent.type} (${ent.voie})</strong><br>
+                PK ${ent.pks} -> ${ent.pke}
+            </div>
+            <button onclick="deleteEntity(${ent.id})" class="btn-del">✕</button>
         </div>
     `).join('');
 }
 
-function addNewFicheType() {
-    const name = document.getElementById('new-fiche-name').value;
-    const color = document.getElementById('new-fiche-color').value;
-    if(!name) return;
-    const id = name.toUpperCase().replace(/\s/g, '_');
-    state.ficheTypes[id] = { color, label: name };
-    document.getElementById('new-fiche-name').value = '';
-    renderLegend();
-}
-
-function removeFicheType(id) {
-    delete state.ficheTypes[id];
-    renderLegend();
-}
-
-// --- TRAVAIL SUR LES ZONES (SYNOPTIQUE) ---
-function addZone(pkS, pkE, typeKey, status = '') {
-    const config = state.ficheTypes[typeKey] || { color: '#7f8c8d', label: typeKey };
-    const x = (pkS - state.pkOrigin) * state.scale;
-    const w = (pkE - pkS) * state.scale;
-    
-    state.entities.push({
-        id: Date.now(),
-        pkS, pkE, x, w,
-        y: (Object.keys(state.ficheTypes).indexOf(typeKey) * 40) + 50,
-        h: 25,
-        typeKey,
-        label: config.label,
-        status: status, // C, NC, NR
-        date: ''
-    });
-    render();
-}
-
-// --- RENDU GRAPHIQUE ---
+// --- DESSIN DU SYNOPTIQUE ---
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    ctx.translate(state.camera.x, state.camera.y);
-    ctx.scale(state.camera.zoom, state.camera.zoom);
+    ctx.translate(50, 200); // Décalage caméra
 
-    // Grille PK
-    ctx.strokeStyle = "#222";
-    for(let i=0; i<10000; i+= (state.scale * 10)) {
-        ctx.beginPath(); ctx.moveTo(i, -500); ctx.lineTo(i, 500); ctx.stroke();
-        ctx.fillStyle = "#555";
-        ctx.fillText("PK " + (state.pkOrigin + i/state.scale), i + 5, 250);
-    }
+    // Lignes de Voie (V1 et V2)
+    [60, 100, 140, 180].forEach(y => {
+        ctx.strokeStyle = "#333";
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(5000, y); ctx.stroke();
+    });
 
-    // Dessin des Zones
+    // Dessin des entités (Zones et Points)
     state.entities.forEach(ent => {
-        // Logique de couleur selon Statut (C=Vert, NC=Rouge, NR=Orange)
-        let color = state.ficheTypes[ent.typeKey]?.color || '#7f8c8d';
-        if(ent.status === 'C') color = '#27ae60';
-        if(ent.status === 'NC') color = '#e74c3c';
-        if(ent.status === 'NR') color = '#f39c12';
+        const config = state.ficheTypes[ent.type];
+        
+        // Couleur selon statut
+        let color = config.color;
+        if(ent.status === 'C') color = '#27ae60'; // Vert conforme
+        if(ent.status === 'NC') color = '#e74c3c'; // Rouge
+        if(ent.status === 'NR') color = '#f39c12'; // Orange
 
         ctx.fillStyle = color;
-        ctx.fillRect(ent.x, ent.y, ent.w, ent.h);
+        
+        if (ent.pks === ent.pke) { // Point ponctuel (JIC)
+            ctx.fillRect(ent.x - 2, ent.y - 10, 4, 20);
+        } else { // Zone
+            ctx.fillRect(ent.x, ent.y, ent.w, 15);
+        }
+        
         ctx.fillStyle = "white";
-        ctx.font = "bold 11px Arial";
-        ctx.fillText(`${ent.label} [${ent.status}]`, ent.x + 5, ent.y + 17);
+        ctx.font = "9px Arial";
+        ctx.fillText(ent.type, ent.x, ent.y - 5);
     });
 
     ctx.restore();
 }
 
-// --- COMMANDES CONSOLE ---
-document.getElementById('cmd-input').addEventListener('keydown', (e) => {
-    if(e.key === 'Enter') {
-        const p = e.target.value.toUpperCase().split(' ');
-        if(p[0] === 'ZONE') addZone(parseFloat(p[1]), parseFloat(p[2]), p[3], p[4]||'');
-        e.target.value = '';
-    }
-});
-
-function clearAll() { if(confirm("Vider tout le projet ?")) { state.entities = []; render(); } }
-
-// Init
 window.onload = () => {
     canvas.width = canvas.parentElement.clientWidth;
     canvas.height = canvas.parentElement.clientHeight;
-    renderLegend();
     render();
 };
