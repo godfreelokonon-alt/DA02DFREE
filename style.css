@@ -1,17 +1,17 @@
-body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #121212; color: white; height: 100vh; overflow: hidden; }
+:root { --primary: #0078d7; --danger: #e74c3c; --bg: #121212; --panel: #1e1e1e; }
+body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; overflow: hidden; }
 #app-container { display: flex; flex-direction: column; height: 100vh; }
-.smart-ribbon { background: #ffffff; color: #333; height: 70px; display: flex; align-items: center; padding: 0 20px; gap: 30px; border-bottom: 3px solid #0078d7; }
-.brand { font-weight: 800; font-size: 20px; }
-.brand span { color: #0078d7; }
-.tool-group { display: flex; gap: 10px; border-left: 1px solid #ddd; padding-left: 15px; }
-button { padding: 8px 15px; border: 1px solid #ccc; cursor: pointer; border-radius: 4px; font-weight: 600; }
+.smart-ribbon { background: white; color: #333; height: 60px; display: flex; align-items: center; padding: 0 20px; gap: 20px; border-bottom: 3px solid var(--primary); }
+.brand { font-weight: 800; font-size: 18px; }
+.brand span { color: var(--primary); }
+.tool-group { display: flex; align-items: center; gap: 10px; padding-left: 15px; border-left: 1px solid #ddd; }
 .content { display: flex; flex: 1; overflow: hidden; }
-.data-sidebar { width: 350px; background: #1e1e1e; border-right: 1px solid #333; padding: 15px; overflow-y: auto; }
-.table-container table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.table-container th { text-align: left; border-bottom: 2px solid #444; padding: 10px 5px; }
-.table-container td { padding: 8px 5px; border-bottom: 1px solid #333; }
+.sidebar { width: 280px; background: var(--panel); border-right: 1px solid #333; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+#inspector-sidebar { border-right: none; border-left: 1px solid #333; }
 .viewport { flex: 1; position: relative; background: #151515; }
-canvas { width: 100%; height: 100%; cursor: crosshair; }
-#tool-helper { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 20px; font-size: 12px; color: #00ffcc; border: 1px solid #00ffcc; }
+canvas { width: 100%; height: 100%; }
+.fiche-item { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 8px; border-radius: 4px; font-size: 13px; }
+.btn-del { background: none; border: none; color: #ff4444; cursor: pointer; font-weight: bold; }
 .console { background: #000; height: 40px; display: flex; align-items: center; padding: 0 20px; border-top: 1px solid #333; }
-#cmd-input { background: transparent; border: none; color: #00ff00; flex: 1; margin-left: 10px; outline: none; font-family: monospace; }
+#cmd-input { background: transparent; border: none; color: #00ff00; flex: 1; outline: none; font-family: monospace; }
+.card { background: #2a2a2a; padding: 15px; border-radius: 8px; }
