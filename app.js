@@ -1,102 +1,98 @@
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
-const propArea = document.getElementById('val-area');
-const propLen = document.getElementById('val-len');
 
-// --- CONFIGURATION ---
-let currentTool = 'line';
-let points = [];
-let shapes = [];
-const GRID_SIZE = 20; // 20px = 1 unité
+// --- ÉTAT DU SYSTÈME ---
+let state = {
+    currentTool: 'line',
+    shapes: [],
+    points: [],
+    camera: { x: 0, y: 0, zoom: 1 },
+    isPanning: false,
+    color: "#0078d7",
+    width: 2
+};
 
-// Ajuster la taille
+// --- INITIALISATION ---
 function init() {
     canvas.width = canvas.parentElement.clientWidth;
     canvas.height = canvas.parentElement.clientHeight;
-    render();
+}
+window.addEventListener('resize', init);
+init();
+
+// --- TRICHE AUTOCAD : CONNEXION DES BOUTONS ---
+document.getElementById('btn-line').onclick = () => state.currentTool = 'line';
+document.getElementById('btn-rect').onclick = () => state.currentTool = 'rect';
+document.getElementById('btn-text').onclick = () => state.currentTool = 'text';
+document.getElementById('btn-clear').onclick = () => { state.shapes = []; state.points = []; };
+
+// --- GESTION SOURIS (COORDONNÉES MONDE) ---
+function getMousePos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - state.camera.x) / state.camera.zoom,
+        y: (e.clientY - rect.top - state.camera.y) / state.camera.zoom
+    };
 }
 
-window.addEventListener('resize', init);
-
-// --- OUTILS ---
-window.setTool = (tool) => {
-    currentTool = tool;
-    points = []; // On vide le tampon
-    console.log("Outil actif : " + tool);
-};
-
-// --- LOGIQUE DE DESSIN ---
 canvas.addEventListener('mousedown', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    // Le "Snap" : on arrondit à la grille la plus proche
-    const x = Math.round((e.clientX - rect.left) / GRID_SIZE) * GRID_SIZE;
-    const y = Math.round((e.clientY - rect.top) / GRID_SIZE) * GRID_SIZE;
-
-    points.push({x, y});
+    if (e.button === 1) { state.isPanning = true; return; } // Clic molette = Pan
     
-    if (currentTool === 'line' && points.length === 2) {
-        saveShape('line');
+    const pos = getMousePos(e);
+    state.points.push(pos);
+
+    if (state.currentTool === 'line' && state.points.length === 2) {
+        state.shapes.push({ type: 'line', p1: state.points[0], p2: state.points[1], color: state.color, width: state.width });
+        state.points = []; // Reset pour la prochaine ligne
     }
 });
 
-function saveShape(type) {
-    shapes.push({
-        type: type,
-        path: [...points],
-        color: document.getElementById('colorPicker').value,
-        width: document.getElementById('strokeWeight').value
-    });
-    points = [];
-    updateCalculations();
-}
+// --- TRICHE REVIT : ZOOM MOLETTE ---
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    state.camera.zoom *= delta;
+}, { passive: false });
 
-// --- RENDU FLUIDE ---
+// --- RENDU FLUIDE (60 FPS) ---
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 1. Dessiner la grille
-    ctx.beginPath();
-    ctx.strokeStyle = "#e5e5e5";
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x <= canvas.width; x += GRID_SIZE) {
-        ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
-    }
-    for (let y = 0; y <= canvas.height; y += GRID_SIZE) {
-        ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
-    }
-    ctx.stroke();
+    ctx.save();
+    ctx.translate(state.camera.x, state.camera.y);
+    ctx.scale(state.camera.zoom, state.camera.zoom);
 
-    // 2. Dessiner les formes sauvegardées
-    shapes.forEach(s => {
+    // Dessiner Grille
+    ctx.strokeStyle = "#ddd";
+    ctx.lineWidth = 0.5 / state.camera.zoom;
+    for(let i=-2000; i<2000; i+=50) {
+        ctx.beginPath(); ctx.moveTo(i, -2000); ctx.lineTo(i, 2000); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-2000, i); ctx.lineTo(2000, i); ctx.stroke();
+    }
+
+    // Dessiner Formes
+    state.shapes.forEach(s => {
         ctx.beginPath();
         ctx.strokeStyle = s.color;
-        ctx.lineWidth = s.width;
-        ctx.moveTo(s.path[0].x, s.path[0].y);
-        s.path.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.lineWidth = s.width / state.camera.zoom;
+        if(s.type === 'line') {
+            ctx.moveTo(s.p1.x, s.p1.y);
+            ctx.lineTo(s.p2.x, s.p2.y);
+        }
         ctx.stroke();
     });
 
-    // 3. Dessiner le tracé en cours
-    if (points.length > 0) {
+    // Dessiner élastique (pendant qu'on trace)
+    if (state.points.length === 1) {
         ctx.beginPath();
-        ctx.strokeStyle = "#0078d7";
-        ctx.setLineDash([5, 5]); // Ligne pointillée Revit
-        ctx.moveTo(points[0].x, points[0].y);
-        points.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.setLineDash([5, 5]);
+        ctx.moveTo(state.points[0].x, state.points[0].y);
+        // On récupère la position actuelle de la souris "monde"
+        // (Note: nécessite de suivre mousemove pour être parfait)
         ctx.stroke();
         ctx.setLineDash([]);
     }
 
+    ctx.restore();
     requestAnimationFrame(render);
 }
-
-function updateCalculations() {
-    // Exemple calcul longueur dernier trait
-    const last = shapes[shapes.length - 1];
-    if(last && last.path.length >= 2) {
-        const d = Math.sqrt(Math.pow(last.path[1].x - last.path[0].x, 2) + Math.pow(last.path[1].y - last.path[0].y, 2));
-        propLen.innerText = (d / GRID_SIZE).toFixed(2);
-    }
-}
-
-init();
+render();
