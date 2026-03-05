@@ -1,0 +1,18 @@
+/* Style Général */
+body { margin: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #f0f0f0; }
+
+/* Ruban type Revit */
+.ribbon { height: 80px; background: #fff; border-bottom: 2px solid #ccc; display: flex; padding: 5px; gap: 20px; }
+.group { border-right: 1px solid #ddd; padding: 0 10px; display: flex; flex-direction: column; align-items: center; }
+.group span { font-size: 10px; font-weight: bold; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+button { padding: 8px 12px; cursor: pointer; border: 1px solid #ddd; background: white; border-radius: 4px; }
+button:hover { background: #e0e0e0; }
+
+/* Organisation de l'espace */
+.workspace { display: flex; flex: 1; overflow: hidden; }
+.panel { width: 250px; background: #fafafa; border: 1px solid #ccc; padding: 15px; font-size: 13px; }
+.canvas-container { flex: 1; background: #333; /* Fond sombre comme AutoCAD/Revit */ display: flex; align-items: center; justify-content: center; overflow: hidden; }
+canvas { background: #fff; cursor: crosshair; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+
+/* Éléments de bibliothèque */
+.lib-item { padding: 10px; border: 1px dashed #aaa; margin-bottom: 10px; text-align: center; cursor: grab; background: white; }
