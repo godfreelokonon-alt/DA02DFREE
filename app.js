@@ -1,52 +1,68 @@
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
+const cmdInput = document.getElementById('cmd-input');
+
+// --- CONFIGURATION FERROVIAIRE ---
+const PK_ORIGIN = 18000;
+const SCALE = 10; // 1 mètre = 10 pixels
+const RAIL_TYPES = {
+    'M240': { color: '#3498db', label: 'Traverses M240' },
+    'M243': { color: '#2980b9', label: 'Traverses M243' },
+    'ZE': { color: '#e67e22', label: 'Zone Étroite' }
+};
 
 let state = {
     entities: [],
-    currentPoints: [],
-    tool: 'line',
-    camera: { x: window.innerWidth/2, y: window.innerHeight/2, zoom: 0.8 },
-    unit: 1,
-    isDrawing: false
+    camera: { x: 100, y: 300, zoom: 1.0 },
+    tool: 'rail'
 };
 
-// --- LOGIQUE FERROVIAIRE ---
-function setTool(t) {
-    state.tool = t;
-    const hints = {
-        rail: "Tracez l'axe de la voie. Profil M240 généré.",
-        jic: "Cliquez pour poser un Joint Isolant Collé (Point d'arrêt).",
-        line: "Dessin libre de structure."
-    };
-    document.getElementById('tool-helper').innerText = hints[t];
+function init() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
 }
+window.addEventListener('resize', init);
+init();
 
-// Dessin d'un Rail avec Profil (Simule la 3D)
-function drawRail(ent) {
-    // Patin du rail (Large)
-    ctx.strokeStyle = "#555";
-    ctx.lineWidth = 12 / state.camera.zoom;
-    ctx.beginPath();
-    ctx.moveTo(ent.p1.x, ent.p1.y);
-    ctx.lineTo(ent.p2.x, ent.p2.y);
-    ctx.stroke();
+// --- LOGIQUE DE COMMANDE (ZONE PK START PK END TYPE) ---
+cmdInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const parts = cmdInput.value.toUpperCase().split(' ');
+        if (parts[0] === 'ZONE') {
+            const start = parseFloat(parts[1]);
+            const end = parseFloat(parts[2]);
+            const type = parts[3];
+            addZone(start, end, type);
+        }
+        cmdInput.value = '';
+    }
+});
 
-    // Table de roulement (Acier brillant)
-    ctx.strokeStyle = "#ddd";
-    ctx.lineWidth = 4 / state.camera.zoom;
-    ctx.stroke();
+function addZone(pkS, pkE, type) {
+    const config = RAIL_TYPES[type] || { color: '#95a5a6', label: type };
+    const x = (pkS - PK_ORIGIN) * SCALE;
+    const w = (pkE - pkS) * SCALE;
     
-    // Cotation automatique de longueur (PK)
-    const dist = Math.sqrt(Math.pow(ent.p2.x-ent.p1.x,2) + Math.pow(ent.p2.y-ent.p1.y,2));
-    drawDim(ent.p1, ent.p2, (dist/10).toFixed(2) + "m");
+    state.entities.push({
+        type: 'zone',
+        pkS, pkE, x, w,
+        y: 50, h: 30,
+        color: config.color,
+        label: config.label
+    });
+    updateTable();
 }
 
-function drawDim(p1, p2, text) {
-    ctx.save();
-    ctx.fillStyle = "yellow";
-    ctx.font = "10px Arial";
-    ctx.fillText(text, (p1.x+p2.x)/2, (p1.y+p2.y)/2 - 15);
-    ctx.restore();
+function updateTable() {
+    const body = document.getElementById('data-body');
+    body.innerHTML = state.entities.map(ent => `
+        <tr>
+            <td>${ent.pkS}</td>
+            <td>${ent.pkE}</td>
+            <td>${ent.label}</td>
+            <td style="color:#00ff00">CONFORME</td>
+        </tr>
+    `).join('');
 }
 
 // --- MOTEUR DE RENDU ---
@@ -56,64 +72,29 @@ function render() {
     ctx.translate(state.camera.x, state.camera.y);
     ctx.scale(state.camera.zoom, state.camera.zoom);
 
-    // Grille de précision
+    // Grille PK
     ctx.strokeStyle = "#222";
-    ctx.beginPath();
-    for(let i=-2000; i<2000; i+=50) {
-        ctx.moveTo(i,-2000); ctx.lineTo(i,2000);
-        ctx.moveTo(-2000,i); ctx.lineTo(2000,i);
+    for(let i=0; i<5000; i+=100) {
+        ctx.beginPath(); ctx.moveTo(i, -1000); ctx.lineTo(i, 1000); ctx.stroke();
+        ctx.fillStyle = "#444"; ctx.fillText("PK "+(PK_ORIGIN + i/SCALE), i+5, 200);
     }
-    ctx.stroke();
 
+    // Dessin des Zones (Style Synoptique Excel)
     state.entities.forEach(ent => {
-        if(ent.type === 'rail') drawRail(ent);
-        else {
-            ctx.strokeStyle = "cyan";
-            ctx.beginPath(); ctx.moveTo(ent.p1.x, ent.p1.y); ctx.lineTo(ent.p2.x, ent.p2.y); ctx.stroke();
-        }
+        ctx.fillStyle = ent.color;
+        ctx.fillRect(ent.x, ent.y, ent.w, ent.h);
+        ctx.fillStyle = "white";
+        ctx.font = "bold 11px Arial";
+        ctx.fillText(ent.label, ent.x + 5, ent.y + 18);
     });
 
     ctx.restore();
     requestAnimationFrame(render);
 }
 
-// --- INTERACTION SOURIS ---
-canvas.addEventListener('mousedown', e => {
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left - state.camera.x) / state.camera.zoom;
-    const y = (e.clientY - rect.top - state.camera.y) / state.camera.zoom;
-    
-    state.currentPoints.push({x, y});
-    
-    if(state.currentPoints.length === 2) {
-        const newEntity = {
-            type: state.tool,
-            p1: state.currentPoints[0],
-            p2: state.currentPoints[1],
-            pkStart: 18000 + Math.random()*100, // Simulation PK
-            z: 0
-        };
-        state.entities.push(newEntity);
-        state.currentPoints = [];
-        updateDataTable();
-    }
-});
+// Zoom molette
+canvas.addEventListener('wheel', e => {
+    state.camera.zoom *= e.deltaY > 0 ? 0.9 : 1.1;
+}, {passive:false});
 
-function updateDataTable() {
-    const body = document.getElementById('data-body');
-    body.innerHTML = state.entities.map((e, i) => `
-        <tr>
-            <td>${e.type.toUpperCase()}</td>
-            <td>${e.pkStart.toFixed(0)}</td>
-            <td>${(e.pkStart + 12).toFixed(0)}</td>
-            <td>${e.z}</td>
-            <td style="color:lawngreen">CONFORME</td>
-        </tr>
-    `).join('');
-}
-
-window.onload = () => {
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight;
-    render();
-};
+render();
