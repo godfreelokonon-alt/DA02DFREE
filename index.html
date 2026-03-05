@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>MiniRevit 2D - Workspace</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="ribbon">
+        <div class="group">
+            <span>DESSIN</span>
+            <button onclick="setTool('line')">Ligne</button>
+            <button onclick="setTool('rect')">Rectangle</button>
+            <button onclick="setTool('poly')">Polyligne</button>
+        </div>
+        <div class="group">
+            <span>ANNOTER</span>
+            <button onclick="setTool('text')">Texte</button>
+            <button onclick="calculate()">Calculer Surface</button>
+        </div>
+        <div class="group">
+            <span>PROJET</span>
+            <button class="save">Enregistrer</button>
+        </div>
+    </header>
+
+    <main class="workspace">
+        <aside class="panel properties">
+            <h3>Propriétés</h3>
+            <div id="prop-content">
+                <label>Couleur : <input type="color" id="colorPicker"></label>
+                <label>Épaisseur : <input type="number" value="2" id="strokeWeight"></label>
+                <hr>
+                <div id="calculations">
+                    <p>Longueur: <span id="val-len">0</span> m</p>
+                    <p>Surface: <span id="val-area">0</span> m²</p>
+                </div>
+            </div>
+        </aside>
+
+        <section class="canvas-container">
+            <canvas id="mainCanvas"></canvas>
+        </section>
+
+        <aside class="panel library">
+            <h3>Bibliothèque</h3>
+            <div class="lib-item" draggable="true">Porte Standard</div>
+            <div class="lib-item" draggable="true">Fenêtre 120x60</div>
+            <div class="lib-item" draggable="true">Mobilier Bureau</div>
+        </aside>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
