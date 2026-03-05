@@ -1,80 +1,102 @@
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
+const propArea = document.getElementById('val-area');
+const propLen = document.getElementById('val-len');
 
-// On ajuste la taille du canvas à sa zone d'affichage
-canvas.width = canvas.parentElement.clientWidth;
-canvas.height = canvas.parentElement.clientHeight;
+// --- CONFIGURATION ---
+let currentTool = 'line';
+let points = [];
+let shapes = [];
+const GRID_SIZE = 20; // 20px = 1 unité
 
-let currentTool = 'poly';
-let points = []; // Liste des points pour la polyligne en cours
-let allShapes = []; // Stockage final
-
-function setTool(tool) {
-    currentTool = tool;
-    points = []; // On réinitialise si on change d'outil
+// Ajuster la taille
+function init() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+    render();
 }
 
-canvas.addEventListener('click', (e) => {
+window.addEventListener('resize', init);
+
+// --- OUTILS ---
+window.setTool = (tool) => {
+    currentTool = tool;
+    points = []; // On vide le tampon
+    console.log("Outil actif : " + tool);
+};
+
+// --- LOGIQUE DE DESSIN ---
+canvas.addEventListener('mousedown', (e) => {
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Le "Snap" : on arrondit à la grille la plus proche
+    const x = Math.round((e.clientX - rect.left) / GRID_SIZE) * GRID_SIZE;
+    const y = Math.round((e.clientY - rect.top) / GRID_SIZE) * GRID_SIZE;
 
-    if (currentTool === 'poly') {
-        points.push({x, y});
-        draw();
-        if (points.length > 1) {
-            updateCalculations();
-        }
+    points.push({x, y});
+    
+    if (currentTool === 'line' && points.length === 2) {
+        saveShape('line');
     }
 });
 
-// Pour fermer la forme (clic droit)
-canvas.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    if (points.length > 2) {
-        // On ferme la forme en reliant le dernier point au premier
-        allShapes.push({type: 'polygon', path: [...points], color: 'rgba(0, 120, 215, 0.3)'});
-        points = [];
-        draw();
-    }
-});
+function saveShape(type) {
+    shapes.push({
+        type: type,
+        path: [...points],
+        color: document.getElementById('colorPicker').value,
+        width: document.getElementById('strokeWeight').value
+    });
+    points = [];
+    updateCalculations();
+}
 
-function draw() {
+// --- RENDU FLUIDE ---
+function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Dessiner les formes terminées
-    allShapes.forEach(shape => {
+    // 1. Dessiner la grille
+    ctx.beginPath();
+    ctx.strokeStyle = "#e5e5e5";
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x <= canvas.width; x += GRID_SIZE) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
+    }
+    for (let y = 0; y <= canvas.height; y += GRID_SIZE) {
+        ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+    }
+    ctx.stroke();
+
+    // 2. Dessiner les formes sauvegardées
+    shapes.forEach(s => {
         ctx.beginPath();
-        ctx.fillStyle = shape.color;
-        ctx.moveTo(shape.path[0].x, shape.path[0].y);
-        shape.path.forEach(p => ctx.lineTo(p.x, p.y));
-        ctx.closePath();
-        ctx.fill();
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = s.width;
+        ctx.moveTo(s.path[0].x, s.path[0].y);
+        s.path.forEach(p => ctx.lineTo(p.x, p.y));
         ctx.stroke();
     });
 
-    // Dessiner la polyligne en cours
+    // 3. Dessiner le tracé en cours
     if (points.length > 0) {
         ctx.beginPath();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#0078d7';
+        ctx.strokeStyle = "#0078d7";
+        ctx.setLineDash([5, 5]); // Ligne pointillée Revit
         ctx.moveTo(points[0].x, points[0].y);
         points.forEach(p => ctx.lineTo(p.x, p.y));
         ctx.stroke();
+        ctx.setLineDash([]);
     }
+
+    requestAnimationFrame(render);
 }
 
 function updateCalculations() {
-    // Calcul de surface simplifié (Algorithme du lacet / Shoelace)
-    let area = 0;
-    for (let i = 0; i < points.length; i++) {
-        let j = (i + 1) % points.length;
-        area += points[i].x * points[j].y;
-        area -= points[j].x * points[i].y;
+    // Exemple calcul longueur dernier trait
+    const last = shapes[shapes.length - 1];
+    if(last && last.path.length >= 2) {
+        const d = Math.sqrt(Math.pow(last.path[1].x - last.path[0].x, 2) + Math.pow(last.path[1].y - last.path[0].y, 2));
+        propLen.innerText = (d / GRID_SIZE).toFixed(2);
     }
-    area = Math.abs(area) / 2;
-    
-    // Conversion simulée (100px = 1m -> donc /10000 pour m²)
-    const realArea = (area / 10000).toFixed(2);
-    document.getElementById('val-area').innerText = realArea;
 }
+
+init();
