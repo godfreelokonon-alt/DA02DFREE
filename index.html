@@ -2,53 +2,66 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>GODFREE RAIL ENGINE - SYNC PRO</title>
+    <title>GODFREE RAIL STUDIO v2.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app-container">
         <header class="smart-ribbon">
-            <div class="brand">GODFREE <span>SYNOPTIQUE</span></div>
-            
-            <div class="tool-group config">
-                <label>PK Départ: <input type="number" id="pk-start-cfg" value="18000" onchange="updateProjectSettings()"></label>
-                <label>Échelle (px/m): <input type="number" id="pk-scale-cfg" value="10" onchange="updateProjectSettings()"></label>
+            <div class="brand">GODFREE <span>RAIL STUDIO</span></div>
+            <div class="project-params">
+                PK Départ: <input type="number" id="pk-start" value="18000" onchange="sync()">
+                Échelle: <input type="number" id="scale-val" value="10" onchange="sync()">
             </div>
-
-            <div class="tool-group">
-                <button onclick="toggleLegendManager()" class="btn-primary">⚙️ Gérer les Fiches</button>
-                <button onclick="clearAll()" class="btn-danger">🗑️ Vider Tout</button>
-                <button onclick="exportJSON()" class="btn-success">📤 Exporter JSON</button>
+            <div class="actions">
+                <button onclick="openModal('zone')" class="btn-zone">+ Ajouter Zone</button>
+                <button onclick="openModal('point')" class="btn-point">+ Élément Ponctuel (JIC)</button>
+                <button onclick="exportData()" class="btn-export">Exporter PDF/Excel</button>
             </div>
         </header>
 
         <main class="content">
-            <aside class="sidebar" id="legend-sidebar">
-                <h3>Types de Fiches</h3>
-                <div id="legend-list"></div>
+            <aside class="sidebar left">
+                <h3>Légende & Fiches</h3>
+                <div id="legend-items"></div>
                 <hr>
-                <input type="text" id="new-fiche-name" placeholder="Nom nouvelle fiche...">
-                <input type="color" id="new-fiche-color" value="#3498db">
-                <button onclick="addNewFicheType()">➕ Ajouter Type</button>
+                <button onclick="openLegendModal()" class="btn-add-type">⚙️ Configurer Types</button>
             </aside>
 
             <section class="viewport">
                 <canvas id="mainCanvas"></canvas>
-                <div id="tool-helper">Utilisez la console pour tracer ou cliquez sur une zone.</div>
+                <div id="pk-indicator">PK: ---</div>
             </section>
 
-            <aside class="sidebar" id="inspector-sidebar">
-                <h3>Propriétés Réception</h3>
-                <div id="inspector-content">
-                    <p class="empty-msg">Sélectionnez une zone sur le synoptique...</p>
-                </div>
+            <aside class="sidebar right">
+                <h3>Suivi de Réception</h3>
+                <div id="reception-list" class="list-container"></div>
             </aside>
         </main>
+    </div>
 
-        <footer class="console">
-            <span class="prompt">COMMANDE ></span>
-            <input type="text" id="cmd-input" placeholder="Ex: ZONE 18033 18098 M240 C">
-        </footer>
+    <div id="zone-modal" class="modal">
+        <div class="modal-content">
+            <h3>Nouvel Élément Ferroviaire</h3>
+            <label>Type : <select id="input-type"></select></label>
+            <label>Voie : <select id="input-voie"><option>V1</option><option>V2</option></select></label>
+            <div class="pk-group">
+                <label>PK Début: <input type="number" id="input-pks"></label>
+                <label>PK Fin: <input type="number" id="input-pke"></label>
+            </div>
+            <label>Statut : 
+                <select id="input-status">
+                    <option value="">Vide</option>
+                    <option value="C">C (Conforme)</option>
+                    <option value="NC">NC (Non Conforme)</option>
+                    <option value="NR">NR (Non Reçu)</option>
+                </select>
+            </label>
+            <div class="modal-buttons">
+                <button onclick="saveZone()">Enregistrer</button>
+                <button onclick="closeModal()" class="btn-cancel">Annuler</button>
+            </div>
+        </div>
     </div>
     <script src="app.js"></script>
 </body>
