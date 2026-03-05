@@ -1,88 +1,67 @@
-const data = {
-    items: JSON.parse(localStorage.getItem('rail_v3')) || [],
-    types: { 'M240': '#3498db', 'M243': '#2980b9', 'JIC': '#e74c3c', 'BALLAST': '#27ae60' },
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    save() {
-        localStorage.setItem('rail_v3', JSON.stringify(this.items));
-        ui.render();
-    },
-    add(type, pks, pke, status, voie) {
-        this.items.push({ id: Date.now(), type, pks, pke, status, voie });
-        this.save();
-    },
-    delete(id) {
-        this.items = this.items.filter(i => i.id !== id);
-        this.save();
-    },
-    clear() {
-        if(confirm("Effacer TOUTES les données ?")) {
-            this.items = [];
-            localStorage.removeItem('rail_v3');
-            ui.render();
-        }
+    // On ajoute un petit padding à gauche pour les textes de PK
+    const offsetX = 60; 
+    ctx.save();
+    ctx.translate(offsetX, 0);
+
+    // --- DESSIN DES LIGNES DE VOIE (CONTEXTE VISUEL) ---
+    ctx.strokeStyle = "#444";
+    ctx.lineWidth = 2;
+    [100, 250].forEach(y => { // Ligne pour V1 et V2
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    });
+
+    // --- GRILLE ET GRADUATIONS PK ---
+    ctx.strokeStyle = "#333";
+    ctx.fillStyle = "#888";
+    ctx.font = "10px Arial";
+    
+    // On dessine une graduation tous les 100m (ajustable selon le scale)
+    const step = 100; 
+    for(let pk = state.pkOrigin; pk < state.pkOrigin + (canvas.width / state.scale); pk += step) {
+        const x = (pk - state.pkOrigin) * state.scale;
+        ctx.beginPath();
+        ctx.moveTo(x, 50);
+        ctx.lineTo(x, 300);
+        ctx.stroke();
+        ctx.fillText(`PK ${pk.toFixed(0)}`, x + 2, 45);
     }
-};
 
-const ui = {
-    render() {
-        const canv = document.getElementById('canvas');
-        const ctx = canv.getContext('2d');
-        canv.width = canv.parentElement.clientWidth;
-        canv.height = canv.parentElement.clientHeight;
-
-        ctx.clearRect(0,0, canv.width, canv.height);
+    // --- DESSIN DES ENTITÉS ---
+    state.entities.forEach(ent => {
+        const config = state.ficheTypes[ent.type] || { color: '#777' };
         
-        // Liste de droite (avec le X pour supprimer)
-        const list = document.getElementById('object-list');
-        list.innerHTML = data.items.map(i => `
-            <div class="card status-${i.status}">
-                <span>${i.type} (${i.voie}) PK ${i.pks}</span>
-                <button onclick="data.delete(${i.id})">X</button>
-            </div>
-        `).join('');
+        // Logique de couleur selon le statut
+        let color = config.color;
+        if(ent.status === 'C') color = '#27ae60';  // Conforme
+        if(ent.status === 'NC') color = '#e74c3c'; // Non-Conforme
+        if(ent.status === 'NR') color = '#f39c12'; // À reprendre
 
-        // Dessin Synoptique
-        ctx.save();
-        ctx.translate(50, 50);
-        data.items.forEach((item, index) => {
-            let color = data.types[item.type] || '#95a5a6';
-            if(item.status === 'C') color = '#27ae60'; //
-            if(item.status === 'NC') color = '#e74c3c'; //
-            if(item.status === 'NR') color = '#f39c12'; //
+        const x = (ent.pks - state.pkOrigin) * state.scale;
+        const w = Math.max(8, (ent.pke - ent.pks) * state.scale);
+        
+        // Position Y dynamique selon la Voie et le Type (pour éviter les superpositions)
+        const baseY = (ent.voie === 'V1' ? 80 : 230);
+        const typeOffset = Object.keys(state.ficheTypes).indexOf(ent.type) * 20;
+        const y = baseY + typeOffset;
 
-            const x = (item.pks - 18000) * 10;
-            const w = Math.max(5, (item.pke - item.pks) * 10);
-            // On décale chaque fiche vers le bas pour éviter l'empilement
-            const y = (item.voie === 'V1' ? 20 : 250) + (index * 25);
+        // Ombre pour le relief
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, 15);
+        
+        // Reset ombre pour le texte
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "white";
+        ctx.fillText(`${ent.type}`, x + 2, y + 11);
+    });
 
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, w, 20);
-            ctx.fillStyle = "white";
-            ctx.fillText(`${item.type} ${item.voie}`, x, y - 5);
-        });
-        ctx.restore();
-    },
-    openModal() { document.getElementById('modal').style.display = 'flex'; },
-    closeModal() { document.getElementById('modal').style.display = 'none'; },
-    save() {
-        data.add(
-            document.getElementById('in-type').value.toUpperCase(),
-            parseFloat(document.getElementById('in-pks').value),
-            parseFloat(document.getElementById('in-pke').value),
-            document.getElementById('in-status').value,
-            document.getElementById('in-voie').value
-        );
-        this.closeModal();
-    }
-};
-
-// Console Revit
-document.getElementById('cmd').addEventListener('keydown', (e) => {
-    if(e.key === 'Enter') {
-        const p = e.target.value.split(' ');
-        if(p[0].toUpperCase() === 'ZONE') data.add(p[3], parseFloat(p[1]), parseFloat(p[2]), p[4]||'', p[5]||'V1');
-        e.target.value = '';
-    }
-});
-
-window.onload = () => ui.render();
+    ctx.restore();
+}
