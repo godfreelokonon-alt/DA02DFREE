@@ -2,54 +2,56 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>MiniRevit 2D - Silicon Valley Edition</title>
+    <title>GODFREE RAIL ENGINE - Expert System</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="ribbon">
-        <div class="group">
-            <span>DESSIN</span>
-            <button id="btn-line">Ligne</button>
-            <button id="btn-rect">Rectangle</button>
-        </div>
-        <div class="group">
-            <span>ANNOTER</span>
-            <button id="btn-text">Texte</button>
-            <button id="btn-clear" style="color: #ff4d4d;">Effacer Tout</button>
-        </div>
-        <div class="group">
-            <span>PROJET</span>
-            <button id="btn-save">Exporter JSON</button>
-        </div>
-    </header>
-
-    <main class="workspace">
-        <aside class="panel properties">
-            <h3>Propriétés</h3>
-            <label>Couleur : <input type="color" id="colorPicker" value="#0078d7"></label>
-            <label>Taille : <input type="number" id="strokeWeight" value="2" min="1"></label>
-            <hr>
-            <div id="stats">
-                <p>Curseur X: <span id="stat-x">0</span></p>
-                <p>Curseur Y: <span id="stat-y">0</span></p>
-                <p>Objets: <span id="stat-count">0</span></p>
+    <div id="app-container">
+        <header class="smart-ribbon">
+            <div class="brand">GODFREE <span>RAIL</span></div>
+            <div class="tool-group">
+                <button onclick="setTool('line')">Trait</button>
+                <button onclick="setTool('rail')" class="btn-rail">🛤️ Poser Rail</button>
+                <button onclick="setTool('jic')">🔗 Insérer JIC</button>
             </div>
-        </aside>
-
-        <section class="canvas-container" style="position: relative; flex: 1; background: #1a1a1a;">
-            <canvas id="mainCanvas"></canvas>
-            <div id="cmd-bar" style="position: absolute; bottom: 0; left: 0; right: 0; background: #000; color: #00ff00; padding: 8px 15px; font-family: monospace; display: flex; border-top: 1px solid #444;">
-                <span style="margin-right: 10px;">>></span>
-                <input type="text" id="cmd-input" placeholder="Tapez des coordonnées (x,y) ou une commande..." style="background: transparent; border: none; color: #00ff00; outline: none; flex: 1;">
+            <div class="tool-group">
+                <select id="unit-select" onchange="updateUnits()">
+                    <option value="1">Mètres (m)</option>
+                    <option value="100">Centimètres (cm)</option>
+                </select>
+                <button onclick="exportToExcel()" class="btn-excel">Exporter Fiche Contrôle</button>
             </div>
-        </section>
+        </header>
 
-        <aside class="panel library">
-            <h3>Bibliothèque</h3>
-            <div class="lib-item">Porte 90cm</div>
-            <div class="lib-item">Fenêtre 120cm</div>
-        </aside>
-    </main>
+        <main class="content">
+            <aside class="data-sidebar">
+                <h3>Suivi Qualité (PK)</h3>
+                <div class="table-container">
+                    <table id="rail-data">
+                        <thead>
+                            <tr><th>Élément</th><th>PK Début</th><th>PK Fin</th><th>Z</th><th>Statut</th></tr>
+                        </thead>
+                        <tbody id="data-body"></tbody>
+                    </table>
+                </div>
+            </aside>
+
+            <section class="viewport">
+                <canvas id="mainCanvas"></canvas>
+                <div id="tool-helper">Prêt pour la pose. Sélectionnez un outil.</div>
+                <div id="scu-rail">
+                    <div class="axis-x">X</div>
+                    <div class="axis-y">Y</div>
+                    <div class="axis-z">Z</div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="console">
+            <span class="prompt">ENGINE_LOG:</span>
+            <input type="text" id="cmd-input" placeholder="Taper commande (ex: RAIL 18004 18940)...">
+        </footer>
+    </div>
     <script src="app.js"></script>
 </body>
 </html>
